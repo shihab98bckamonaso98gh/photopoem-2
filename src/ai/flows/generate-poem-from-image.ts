@@ -10,13 +10,21 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z, media} from 'genkit';
 
 const GeneratePoemFromImageInputSchema = z.object({
   photoDataUri: z
     .string()
+    .optional()
     .describe(
-      "A photo to inspire the poem, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A photo to inspire the poem, as a data URI. Used for file uploads. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
+  photoUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe(
+      "A URL of a photo to inspire the poem. Used when user provides a URL."
     ),
   tone: z
     .string()
@@ -36,7 +44,15 @@ const GeneratePoemFromImageInputSchema = z.object({
     .positive()
     .optional()
     .describe('The desired number of lines for the poem. If not specified, the AI will decide.'),
+}).superRefine((data, ctx) => {
+  if (!data.photoDataUri && !data.photoUrl) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Either photoDataUri or photoUrl must be provided.",
+    });
+  }
 });
+
 export type GeneratePoemFromImageInput = z.infer<typeof GeneratePoemFromImageInputSchema>;
 
 const GeneratePoemFromImageOutputSchema = z.object({
@@ -52,13 +68,19 @@ export async function generatePoemFromImage(
 
 const generatePoemFromImagePrompt = ai.definePrompt({
   name: 'generatePoemFromImagePrompt',
-  input: {schema: GeneratePoemFromImageInputSchema},
+  input: {schema: z.object({
+    image: media(),
+    tone: z.string().optional(),
+    style: z.string().optional(),
+    language: z.string().optional(),
+    numberOfLines: z.number().int().positive().optional(),
+  })},
   output: {schema: GeneratePoemFromImageOutputSchema},
   prompt: `You are a poet laureate, skilled at writing poems inspired by images.
 
 You will analyze the image and compose a poem that captures its essence and emotional tone.
 
-Image: {{media url=photoDataUri}}
+Image: {{image}}
 
 {{#if tone}}
 Tone: {{tone}}
@@ -90,7 +112,24 @@ const generatePoemFromImageFlow = ai.defineFlow(
     outputSchema: GeneratePoemFromImageOutputSchema,
   },
   async input => {
-    const {output} = await generatePoemFromImagePrompt(input);
+    let imagePart;
+    if (input.photoUrl) {
+      // If a URL is provided, fetch it. The AI model will handle fetching from the URL.
+      imagePart = { media: { url: input.photoUrl } };
+    } else if (input.photoDataUri) {
+      // If a data URI is provided, use it directly.
+      imagePart = { media: { url: input.photoDataUri } };
+    } else {
+      throw new Error("No image provided. Please provide either a data URI or a URL.");
+    }
+    
+    const {output} = await generatePoemFromImagePrompt({
+      image: imagePart,
+      tone: input.tone,
+      style: input.style,
+      language: input.language,
+      numberOfLines: input.numberOfLines,
+    });
     return output!;
   }
 );

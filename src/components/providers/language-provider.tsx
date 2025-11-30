@@ -39,35 +39,40 @@ export const LanguageProvider: FC<LanguageProviderProps> = ({
   defaultLanguage = "en",
   storageKey = "app-language",
 }) => {
-  const [language, setLanguageState] = useState<Language>(() => {
-     if (typeof window === 'undefined') {
-      return defaultLanguage;
-    }
-    return (localStorage.getItem(storageKey) as Language) || defaultLanguage;
-  });
+  const [language, setLanguageState] = useState<Language>(defaultLanguage);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem(storageKey, language);
+    setIsMounted(true);
+    const storedLang = localStorage.getItem(storageKey) as Language;
+    if (storedLang && translationsMap[storedLang]) {
+      setLanguageState(storedLang);
     }
-  }, [language, storageKey]);
+  }, [storageKey]);
+  
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem(storageKey, language);
+    }
+  }, [language, storageKey, isMounted]);
 
   const setLanguage = (newLanguage: Language) => {
     setLanguageState(newLanguage);
   };
 
   const t = useCallback((key: string, params?: Record<string, string | number>): string => {
-    let translation = translationsMap[language]?.[key] || translationsMap['en']?.[key] || key;
+    const effectiveLanguage = isMounted ? language : defaultLanguage;
+    let translation = translationsMap[effectiveLanguage]?.[key] || translationsMap['en']?.[key] || key;
     if (params) {
       Object.keys(params).forEach(paramKey => {
         translation = translation.replace(`{${paramKey}}`, String(params[paramKey]));
       });
     }
     return translation;
-  }, [language]);
+  }, [language, defaultLanguage, isMounted]);
 
   const value = {
-    language,
+    language: isMounted ? language : defaultLanguage,
     setLanguage,
     t,
   };

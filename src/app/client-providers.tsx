@@ -4,7 +4,7 @@
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { ThemeProvider } from "next-themes";
 import { LanguageProvider, useLanguage } from "@/components/providers/language-provider";
 
 // Inner component to use useLanguage hook for dynamic title and meta description
@@ -28,8 +28,8 @@ function DynamicMetaSetter() {
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider
-      attribute="class" // if you want to use class-based theme
-      defaultTheme="system" // or "light" or "dark"
+      attribute="class"
+      defaultTheme="system"
       enableSystem
       disableTransitionOnChange
     >

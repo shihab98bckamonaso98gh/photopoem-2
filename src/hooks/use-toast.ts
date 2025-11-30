@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -7,15 +8,17 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+import { type VariantProps } from "class-variance-authority"
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_LIMIT = 3
+const TOAST_REMOVE_DELAY = 5000
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  variant?: VariantProps<typeof toastVariants>["variant"]
 }
 
 const actionTypes = {
@@ -192,3 +195,5 @@ function useToast() {
 }
 
 export { useToast, toast }
+export type { ToastProps } from "@/components/ui/toast";
+export { toastVariants } from "@/components/ui/toast";

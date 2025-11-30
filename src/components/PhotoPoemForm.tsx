@@ -4,7 +4,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { useState, ChangeEvent, useEffect } from "react";
+import { useState, ChangeEvent, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { generatePoemFromImage } from "@/ai/flows/generate-poem-from-image";
 import type { GeneratePoemFromImageInput } from "@/ai/flows/generate-poem-from-image";
@@ -37,7 +37,7 @@ import { useLanguage } from "@/components/providers/language-provider";
 
 const formSchema = z.object({
   imageSource: z.enum(["upload", "url"]),
-  file: z.custom<File>((val) => val instanceof File, "Please upload an image file.").optional(),
+  file: z.instanceof(File).optional(),
   imageUrl: z.string().url("Please enter a valid URL.").optional(),
   tone: z.string().optional(),
   style: z.string().optional(),
@@ -51,11 +51,11 @@ const formSchema = z.object({
       message: "Please upload an image if 'Upload File' is selected.",
     });
   }
-  if (data.imageSource === "url" && !data.imageUrl) {
+  if (data.imageSource === "url" && (!data.imageUrl || !z.string().url().safeParse(data.imageUrl).success)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["imageUrl"],
-      message: "Please enter an image URL if 'Image URL' is selected.",
+      message: "Please enter a valid image URL if 'Image URL' is selected.",
     });
   }
 });
@@ -104,12 +104,13 @@ const poemLanguages = [
 
 export default function PhotoPoemForm() {
   const { t } = useLanguage();
-  const [imageDataUri, setImageDataUri] = useState<string | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [poem, setPoem] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const [fileName, setFileName] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -122,13 +123,21 @@ export default function PhotoPoemForm() {
     },
   });
 
-  useEffect(() => {
-    setImageDataUri(null);
+  const imageSource = form.watch("imageSource");
+
+  const resetImageState = useCallback(() => {
+    setImagePreviewUrl(null);
     setPoem(null);
     setFileName(null);
+    setError(null);
+    setImageError(false);
     form.resetField("file");
     form.resetField("imageUrl");
-  }, [form.watch("imageSource"), form]);
+  }, [form]);
+
+  useEffect(() => {
+    resetImageState();
+  }, [imageSource, resetImageState]);
 
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -138,9 +147,10 @@ export default function PhotoPoemForm() {
       setFileName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageDataUri(reader.result as string);
+        setImagePreviewUrl(reader.result as string);
         setPoem(null);
         setError(null);
+        setImageError(false);
       };
       reader.onerror = () => {
         const errorMsg = t("toast.error.fileRead");
@@ -151,64 +161,53 @@ export default function PhotoPoemForm() {
     }
   };
 
-  const handleImageUrlChange = async (url: string) => {
-    if (!url) {
-      setImageDataUri(null);
+  const handleImageUrlChange = useCallback((url: string) => {
+    if (url && z.string().url().safeParse(url).success) {
+      setImageError(false);
+      setImagePreviewUrl(url);
+      setFileName(url.substring(url.lastIndexOf('/') + 1) || "Image from URL");
+      setPoem(null);
+      setError(null);
+    } else {
+      setImagePreviewUrl(null);
       setFileName(null);
-      return;
     }
-    setIsLoading(true);
-    setError(null);
-    setPoem(null);
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.statusText} (Status: ${response.status})`);
-      }
-      const blob = await response.blob();
-       if (!blob.type.startsWith('image/')) {
-        throw new Error('URL does not point to a valid image. Please ensure the URL is a direct link to an image file (e.g., .jpg, .png).');
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageDataUri(reader.result as string);
-        setFileName(url.substring(url.lastIndexOf('/') + 1) || "Image from URL");
-        setIsLoading(false);
-      };
-      reader.onerror = () => {
-        throw new Error("Failed to process image from URL.");
-      };
-      reader.readAsDataURL(blob);
-    } catch (err) {
-      const fetchErrorMessage = err instanceof Error ? err.message : "An unknown error occurred while fetching the image URL.";
-      const fullErrorMessage = t("toast.error.imageFetch.generic") + " " + fetchErrorMessage;
-      setError(fullErrorMessage);
-      toast({ variant: "destructive", title: "Error", description: t("toast.error.imageFetch", {errorMessage: fetchErrorMessage}) });
-      setImageDataUri(null);
-      setFileName(null);
-      setIsLoading(false);
-    }
-  };
+}, []);
   
   async function onSubmit(values: FormValues) {
-    if (!imageDataUri) {
-      const errorMsg = t("toast.error.noImageSelected");
-      setError(errorMsg);
-      toast({ variant: "destructive", title: "Error", description: errorMsg });
-      return;
+    if ((!values.file && !values.imageUrl) || imageError) {
+        const errorMsg = t("toast.error.noImageSelected");
+        setError(errorMsg);
+        toast({ variant: "destructive", title: "Error", description: errorMsg });
+        return;
     }
+
     setError(null);
     setIsLoading(true);
     setPoem(null);
 
     try {
       const input: GeneratePoemFromImageInput = {
-        photoDataUri: imageDataUri,
         tone: (values.tone === "" || values.tone === "default") ? undefined : values.tone,
         style: (values.style === "" || values.style === "default") ? undefined : values.style,
         language: (values.language === "" || values.language === "default") ? undefined : values.language,
         numberOfLines: values.numberOfLines === '' ? undefined : Number(values.numberOfLines),
       };
+
+      if (values.imageSource === 'upload' && values.file) {
+        const reader = new FileReader();
+        const fileReadPromise = new Promise<string>((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(values.file!);
+        });
+        input.photoDataUri = await fileReadPromise;
+      } else if (values.imageSource === 'url' && values.imageUrl) {
+        input.photoUrl = values.imageUrl;
+      } else {
+        throw new Error("Invalid form state: no image source provided for submission.");
+      }
+
       const result = await generatePoemFromImage(input);
       setPoem(result.poem);
     } catch (err) {
@@ -232,6 +231,9 @@ export default function PhotoPoemForm() {
         });
     }
   };
+
+  const isSubmitDisabled = isLoading || (imageSource === 'upload' && !form.getValues('file')) || (imageSource === 'url' && (!form.getValues('imageUrl') || !!form.formState.errors.imageUrl)) || imageError;
+
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -302,20 +304,26 @@ export default function PhotoPoemForm() {
                 </TabsContent>
               </Tabs>
 
-              {imageDataUri && (
+              {imagePreviewUrl && (
                 <div className="mt-8 p-4 border-2 border-primary/30 rounded-lg bg-muted/40 animate-in fade-in-0 duration-500 hover:shadow-xl transition-shadow duration-300">
                   <h3 className="text-lg sm:text-xl font-semibold mb-3 text-center text-foreground">{t('form.imagePreview.title')}</h3>
-                  <div className="flex justify-center">
-                    <div className="w-full max-w-[300px] sm:max-w-[350px] mx-auto">
-                      <Image
-                        src={imageDataUri}
-                        alt="Uploaded preview"
-                        width={350} 
-                        height={350} 
-                        className="rounded-lg object-contain w-full h-auto shadow-lg border-2 border-background" 
-                        data-ai-hint="uploaded image"
-                      />
-                    </div>
+                  <div className="flex justify-center items-center min-h-[200px]">
+                      <div className="w-full max-w-[300px] sm:max-w-[350px] mx-auto">
+                        <Image
+                          src={imageError ? 'https://picsum.photos/seed/error/350/350' : imagePreviewUrl}
+                          alt="Image preview"
+                          width={350} 
+                          height={350} 
+                          className="rounded-lg object-contain w-full h-auto shadow-lg border-2 border-background" 
+                          data-ai-hint="uploaded image"
+                          onError={() => {
+                            if (imageSource === 'url') {
+                                setImageError(true);
+                                toast({ variant: "destructive", title: "Error", description: t("toast.error.imageFetch.generic")});
+                            }
+                          }}
+                        />
+                      </div>
                   </div>
                 </div>
               )}
@@ -378,7 +386,7 @@ export default function PhotoPoemForm() {
                         <FormControl>
                           <SelectTrigger className="py-2.5 text-sm sm:py-3 sm:text-base">
                             <SelectValue placeholder={t('form.select.style.placeholder')} />
-                          </SelectTrigger>
+                          </Trigger>
                         </FormControl>
                         <SelectContent>
                           {poemStyles.map(style => (
@@ -417,7 +425,7 @@ export default function PhotoPoemForm() {
               
               {error && <p className="text-sm sm:text-base font-medium text-destructive text-center p-3 bg-destructive/10 rounded-md shadow-sm">{error}</p>}
 
-              <Button type="submit" disabled={isLoading || !imageDataUri} className="w-full text-lg py-6 sm:text-xl sm:py-7 mt-8 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
+              <Button type="submit" disabled={isSubmitDisabled} className="w-full text-lg py-6 sm:text-xl sm:py-7 mt-8 rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:scale-100 disabled:shadow-lg disabled:opacity-50">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
