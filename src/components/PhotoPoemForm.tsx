@@ -172,7 +172,7 @@ export default function PhotoPoemForm() {
       setImagePreviewUrl(null);
       setFileName(null);
     }
-}, []);
+  }, []);
   
   async function onSubmit(values: FormValues) {
     if ((!values.file && !values.imageUrl) || imageError) {
