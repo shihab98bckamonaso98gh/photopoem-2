@@ -10,7 +10,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z, media} from 'genkit';
+import {z} from 'genkit';
 
 const GeneratePoemFromImageInputSchema = z.object({
   photoDataUri: z
@@ -69,7 +69,7 @@ export async function generatePoemFromImage(
 const generatePoemFromImagePrompt = ai.definePrompt({
   name: 'generatePoemFromImagePrompt',
   input: {schema: z.object({
-    image: media(),
+    image: z.string().describe('A media object for the image.'),
     tone: z.string().optional(),
     style: z.string().optional(),
     language: z.string().optional(),
@@ -80,7 +80,7 @@ const generatePoemFromImagePrompt = ai.definePrompt({
 
 You will analyze the image and compose a poem that captures its essence and emotional tone.
 
-Image: {{image}}
+Image: {{media url=image}}
 
 {{#if tone}}
 Tone: {{tone}}
@@ -115,10 +115,10 @@ const generatePoemFromImageFlow = ai.defineFlow(
     let imagePart;
     if (input.photoUrl) {
       // If a URL is provided, fetch it. The AI model will handle fetching from the URL.
-      imagePart = { media: { url: input.photoUrl } };
+      imagePart = input.photoUrl;
     } else if (input.photoDataUri) {
       // If a data URI is provided, use it directly.
-      imagePart = { media: { url: input.photoDataUri } };
+      imagePart = input.photoDataUri;
     } else {
       throw new Error("No image provided. Please provide either a data URI or a URL.");
     }

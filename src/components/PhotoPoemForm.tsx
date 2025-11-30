@@ -386,7 +386,7 @@ export default function PhotoPoemForm() {
                         <FormControl>
                           <SelectTrigger className="py-2.5 text-sm sm:py-3 sm:text-base">
                             <SelectValue placeholder={t('form.select.style.placeholder')} />
-                          </Trigger>
+                          </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {poemStyles.map(style => (
@@ -461,3 +461,5 @@ export default function PhotoPoemForm() {
     </div>
   );
 }
+
+    
