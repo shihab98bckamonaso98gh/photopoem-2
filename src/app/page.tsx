@@ -43,14 +43,14 @@ export default function Home() {
       <footer className="bg-card shadow-sm py-6 mt-auto">
         <div className="container mx-auto px-4 md:px-6 text-center text-sm text-muted-foreground">
           <p className="mt-4">{t('footer.developedBy')}</p>
-          <div className="flex justify-center gap-4 mt-4">
-              <Button asChild>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
+              <Button asChild className="w-full sm:w-auto">
                   <Link href="https://t.me/shihab_me" target="_blank" rel="noopener noreferrer">
                       <TelegramIcon className="mr-2 h-5 w-5" />
                       {t('footer.telegramButton')}
                   </Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="w-full sm:w-auto">
                   <Link href="https://wa.me/8801755163404" target="_blank" rel="noopener noreferrer">
                       <WhatsAppIcon className="mr-2 h-5 w-5" />
                       {t('footer.whatsappButton')}
