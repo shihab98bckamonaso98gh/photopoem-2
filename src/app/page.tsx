@@ -7,6 +7,10 @@ import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { useLanguage } from '@/components/providers/language-provider';
 import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { TelegramIcon } from '@/components/icons/telegram-icon';
+import { WhatsAppIcon } from '@/components/icons/whatsapp-icon';
 
 export default function Home() {
   const { t } = useLanguage();
@@ -39,6 +43,21 @@ export default function Home() {
       <footer className="bg-card shadow-sm py-6 mt-auto">
         <div className="container mx-auto px-4 md:px-6 text-center text-sm text-muted-foreground">
           <p>{t('footer.copyright', { year: currentYear })}</p>
+          <p className="mt-4">{t('footer.developedBy')}</p>
+          <div className="flex justify-center gap-4 mt-4">
+              <Button asChild>
+                  <Link href="https://t.me/shihab_me" target="_blank" rel="noopener noreferrer">
+                      <TelegramIcon className="mr-2 h-5 w-5" />
+                      {t('footer.telegramButton')}
+                  </Link>
+              </Button>
+              <Button asChild variant="secondary">
+                  <Link href="https://wa.me/8801755163404" target="_blank" rel="noopener noreferrer">
+                      <WhatsAppIcon className="mr-2 h-5 w-5" />
+                      {t('footer.whatsappButton')}
+                  </Link>
+              </Button>
+          </div>
         </div>
       </footer>
     </div>
