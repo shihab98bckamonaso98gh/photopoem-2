@@ -51,7 +51,7 @@ export default function Home() {
                       {t('footer.telegramButton')}
                   </Link>
               </Button>
-              <Button asChild variant="secondary">
+              <Button asChild>
                   <Link href="https://wa.me/8801755163404" target="_blank" rel="noopener noreferrer">
                       <WhatsAppIcon className="mr-2 h-5 w-5" />
                       {t('footer.whatsappButton')}
