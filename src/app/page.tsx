@@ -42,7 +42,6 @@ export default function Home() {
       </main> 
       <footer className="bg-card shadow-sm py-6 mt-auto">
         <div className="container mx-auto px-4 md:px-6 text-center text-sm text-muted-foreground">
-          <p>{t('footer.copyright', { year: currentYear })}</p>
           <p className="mt-4">{t('footer.developedBy')}</p>
           <div className="flex justify-center gap-4 mt-4">
               <Button asChild>
@@ -58,6 +57,7 @@ export default function Home() {
                   </Link>
               </Button>
           </div>
+          <p className="mt-4">{t('footer.copyright', { year: 2025 })}</p>
         </div>
       </footer>
     </div>
