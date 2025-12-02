@@ -389,8 +389,8 @@ export default function PhotoPoemForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {poemStyles.map(style => (
-                            <SelectItem key={style.value} value={style.value} className="py-1.5 text-sm sm:py-2 sm:text-base">{t(style.labelKey, {defaultValue: style.label})}</SelectItem>
+                          {poemStyles.map(pStyle => (
+                            <SelectItem key={pStyle.value} value={pStyle.value} className="py-1.5 text-sm sm:py-2 sm:text-base">{t(pStyle.labelKey, {defaultValue: pStyle.label})}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -461,5 +461,3 @@ export default function PhotoPoemForm() {
     </div>
   );
 }
-
-    
