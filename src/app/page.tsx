@@ -45,7 +45,7 @@ export default function Home() {
           <p className="mt-4">{t('footer.developedBy')}</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4">
               <Button asChild className="w-full sm:w-auto">
-                  <Link href="https://t.me/shihab_me" target="_blank" rel="noopener noreferrer">
+                  <Link href="https://t.me/shihab98bc" target="_blank" rel="noopener noreferrer">
                       <TelegramIcon className="mr-2 h-5 w-5" />
                       {t('footer.telegramButton')}
                   </Link>
